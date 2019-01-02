@@ -1,14 +1,60 @@
 from binance.client import Client
 import os
+import sys
 import time
 import configparser
+import smtplib    
 
-def main():
-    config = configparser.ConfigParser()
-    config.read('c:\creds\creds.conf')
-    client = Client(config['binance']['api_key'], config['binance']['api_secret'])
+def main_menu(config):
     clear()
-    selected_order = select_open_order(client)
+    print("Binance CLI Tools\n")
+    print("Please choose an option:")
+    print("1. Scalp tool")
+    print("2. Create Buy order")
+    print("3. Create Sell order")
+    print("4. Cancel order")
+    print("5. Cancel all orders")
+    print("\n0. Quit")
+    choice = input(" >>  ")
+    exec_menu(choice, config)
+
+def exec_menu(choice, config):
+    client = Client(config['binance']['api_key'], config['binance']['api_secret'])
+    if choice == '1':
+        print("")
+        selected_order = select_open_order(client)
+        send_email_alert(config)
+    elif choice == '2':
+        print("")
+        symbol = input("Enter the symbol of the transaction to buy. ")
+        print("")
+        price = input("Enter the price of the transaction to buy. ")
+        buy_order(client, symbol, price)
+    elif choice == '3':
+        print("")
+        symbol = input("Enter the symbol of the transaction to sell. ")
+        print("")
+        price = input("Enter the price of the transaction to sell. ")
+        sell_order(client, symbol, price)
+    elif choice == '4':
+        print("")
+        show_open_orders(client)
+        order_symbol = input("Enter the symbol of the transaction to cancel. ")
+        print("")
+        order_id = input("Enter the order id of the transaction to cancel. ")
+        cancel_order(client, order_symbol, order_id)
+    elif choice == '5':
+        orders = client.get_open_orders()
+        for order in orders:
+            order_symbol = order["symbol"]
+            order_id = order["orderId"]
+            cancel_order(client, order_symbol, order_id)
+    elif choice == '0':
+        sys.exit()
+    else:
+        print("Invalid selection.")
+        time.sleep(1)
+        main_menu()
 
 def clear():
     try:
@@ -55,12 +101,10 @@ def select_open_order(client):
             status = order_status(client, open_order_symbol_upper, open_order_id)
             next_order = configure_next_order(status[2])
             print("")
-            while status != "FILLED":
-                print("")
-                print("Waiting for the current order to fill.")
-                print("")
+            print("Waiting for the current order to fill.")
+            while status[0] != "FILLED":
                 time.sleep(60)
-                status = order_status(open_order_symbol_upper, open_order_id)
+                status = order_status(client, open_order_symbol_upper, open_order_id)
             if next_order[0] == "BUY":
                 buy_order(client, open_order_symbol_upper, next_order[1])
             elif next_order[0] == "SELL":
@@ -110,7 +154,7 @@ def buy_order(client, symbol, price):
     if float(step_size) == 1.00000000:
         str_to_float = float(quote_balance["free"])
         quantity = float(str_to_float) / float(price)
-        quantity_to_int = int(quantity)
+        quantity_cleaned = int(quantity)
     elif float(step_size) < 1.00000000:
         step_size_split = step_size.split('.')
         step_size_split[1]
@@ -146,5 +190,19 @@ def sell_order(client, symbol, price):
     order = client.order_limit_sell(symbol=symbol, quantity=quantity, price=price)
     print(order)
 
+def send_email_alert(config):
+    smtp = smtplib.SMTP('smtp.gmail.com', 587) 
+    smtp.starttls() 
+    smtp.login(config['gmail']['username'], config['gmail']['password']) 
+    message = "The scalped order on Binanace has executed and the next order has been set.  Reset the app to continue scalping."
+    smtp.sendmail("python@localhosthost", config['gmail']['recipient'], message) 
+    smtp.quit()
+
+def cancel_order(client, order_symbol, order_id):
+    cancel = client.cancel_order(symbol=order_symbol, orderId=order_id)
+    print(cancel)
+
 if __name__ == "__main__":
-    main()
+    config = configparser.ConfigParser()
+    config.read('c:\creds\creds.conf')
+    main_menu(config)
