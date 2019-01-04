@@ -1,6 +1,6 @@
 # Binance-Scalper
 The script was written as a scalping helper which immedietely places an additional order once the current order executes.  When running the scalping tool it will have you select an open order, then configure parameters for the next order.  Once set it will wait for the selected open order to close and then place an additional order with the configured parameters.  After it creates the "next" order it will send an email notification then exit.
-<br>
+<br><br>
 ![Scalp1](images/scalp1.jpg?raw=true "Scalp1") <br>
 ![Scalp2](images/scalp2.jpg?raw=true "Scalp2")
 
@@ -33,6 +33,7 @@ if __name__ == "__main__":
 You would need to also create a file on disk with the API creds if you took this pattern of passing in API keys.
 <br>
 Example of the conf file<br>
+
 ```
 [binance]
 api_key: 123456789123456789123456789123456789123456789
